@@ -4,6 +4,7 @@ import uuid
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 import boto3
 
 from django.conf import settings
@@ -25,6 +26,7 @@ ALLOWED_CONTENT_TYPES = {
 }
 
 
+@csrf_exempt
 @require_POST
 def upload_presign(request):
     # 1) guest_id 쿠키 확인
