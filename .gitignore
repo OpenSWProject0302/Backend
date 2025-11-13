@@ -1,0 +1,68 @@
+# ------------------------
+# Python
+# ------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.so
+
+# ------------------------
+# Django / Database
+# ------------------------
+db.sqlite3
+*.log
+media/
+static/
+staticfiles/
+*.pot
+*.mo
+
+# ------------------------
+# Virtual environments
+# ------------------------
+venv/
+env/
+.venv/
+opensw-env/
+ENV/
+env.bak/
+venv.bak/
+
+# ------------------------
+# Environment variables / secrets
+# ------------------------
+.env
+*.env
+
+# ------------------------
+# IDE / Editor
+# ------------------------
+# PyCharm / IntelliJ
+.idea/
+# VSCode (just in case)
+.vscode/
+
+# ------------------------
+# OS generated files
+# ------------------------
+.DS_Store
+Thumbs.db
+
+# ------------------------
+# Migrations cache
+# ------------------------
+*/migrations/__pycache__/
+*/migrations/*.pyc
+# 초기 마이그레이션만 관리하고 싶다면 아래 주석 제거
+# */migrations/*.py
+
+# ------------------------
+# Byte-compiled / backup / temporary
+# ------------------------
+*.bak
+*.swp
+*.tmp
