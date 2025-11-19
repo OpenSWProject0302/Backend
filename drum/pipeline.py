@@ -2,10 +2,10 @@ from typing import Union, Optional
 from pathlib import Path
 import logging
 
-from midi.midi_writer import create_midi_path, write_midi
-from midi.drum_generation import generate_drum_midi_from_audio
-from midi.midi_converter import convert_midi
-from audio.separation_mix import separate_merge_drum
+from drum.midi.midi_writer import create_midi_path, write_midi
+from drum.midi.drum_generation import generate_drum_midi_from_audio
+from drum.midi.midi_converter import convert_midi
+from drum.audio.separation_mix import separate_merge_drum
 
 logger = logging.getLogger(__name__)
 

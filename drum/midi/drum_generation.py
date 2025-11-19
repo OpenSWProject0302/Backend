@@ -1,8 +1,9 @@
 from pathlib import Path
 from mido import MidiTrack, MetaMessage, bpm2tempo
-from audio.analysis import detect_phrase_transitions
-from midi.drum_writer import write_drum_patterns_normal, write_drum_patterns_easy
+from drum.audio.analysis import detect_phrase_transitions
+from drum.midi.drum_writer import write_drum_patterns_normal, write_drum_patterns_easy
 import logging
+
 
 def generate_drum_midi_from_audio(audio_path: Path, genre: str, tempo: int, level:str) -> MidiTrack:
     # 오디오 파일을 분석해서 프레이즈별로 드럼 리듬을 MIDI 트랙에 기록
