@@ -1,13 +1,12 @@
 import json
-import os
 import uuid
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
-import boto3
-
 from django.conf import settings
+import boto3
+from pathlib import Path
 
 
 def get_s3_client():
@@ -19,11 +18,17 @@ def get_s3_client():
     )
 
 
+# 브라우저마다 wav MIME 타입이 조금씩 다를 수 있어서 넉넉하게 허용
 ALLOWED_CONTENT_TYPES = {
-    "audio/mpeg",
+    "audio/mpeg",     # 일반 mp3
     "audio/mp3",
     "audio/wav",
+    "audio/x-wav",
+    "audio/wave",
+    "audio/x-wave",
 }
+
+ALLOWED_EXTS = {".mp3", ".wav"}
 
 
 @csrf_exempt
@@ -50,8 +55,14 @@ def upload_presign(request):
     size = body.get("size")
     content_type = body.get("contentType")
 
+    # size가 문자열로 들어와도 int로 변환 시도
+    try:
+        size = int(size)
+    except (TypeError, ValueError):
+        size = -1
+
     # 3) 기본 검증 (size, contentType)
-    if not isinstance(size, int) or size <= 0 or size > settings.MAX_UPLOAD_SIZE:
+    if size <= 0 or size > settings.MAX_UPLOAD_SIZE:
         return JsonResponse(
             {"ok": False, "error": "INVALID_SIZE"},
             status=400,
@@ -63,13 +74,19 @@ def upload_presign(request):
             status=400,
         )
 
-    # 4) 파일 확장자 추출
-    _base, _dot, ext = filename.rpartition(".")
-    if not ext:
-        ext = "bin"
+    # 4) 파일 확장자 추출 및 검증
+    ext = Path(filename).suffix.lower()
+    if ext == "":
+        ext = ".bin"
 
-    # 5) S3 키 규칙: uploads/{guest_id}/{UUID}.{ext}
-    key = f"uploads/{guest_id}/{uuid.uuid4().hex}.{ext}"
+    if ext not in ALLOWED_EXTS:
+        return JsonResponse(
+            {"ok": False, "error": "UNSUPPORTED_EXTENSION"},
+            status=400,
+        )
+
+    # 5) S3 키 규칙: uploads/{guest_id}/{UUID}{ext}
+    key = f"uploads/{guest_id}/{uuid.uuid4().hex}{ext}"
 
     s3 = get_s3_client()
     bucket = settings.AWS_S3_BUCKET_NAME
@@ -85,7 +102,7 @@ def upload_presign(request):
             },
             ExpiresIn=expires_in,
         )
-    except Exception as e:
+    except Exception:
         return JsonResponse(
             {"ok": False, "error": "PRESIGN_FAILED"},
             status=500,

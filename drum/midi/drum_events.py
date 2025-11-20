@@ -1,5 +1,5 @@
 from mido import MidiTrack, Message
-from patterns.constants import DRUM_CHANNEL, VELOCITY, NOTE_LENGTH, DRUM_NOTES
+from drum.patterns.constants import DRUM_CHANNEL, VELOCITY, NOTE_LENGTH, DRUM_NOTES
 
 # 악기 재생, 종료 함수
 def playOn(track: MidiTrack, note: int, time: int, channel: int):

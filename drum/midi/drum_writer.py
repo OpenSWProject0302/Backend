@@ -1,7 +1,7 @@
 import numpy as np
 from mido import MidiTrack
-from patterns.drum_patterns import DRUM_PATTERNS
-from midi.drum_events import play_drum
+from drum.patterns.drum_patterns import DRUM_PATTERNS
+from drum.midi.drum_events import play_drum
 
 def write_drum_patterns_easy(track:MidiTrack, genre: str, phrases: list) -> MidiTrack:
     # 장르에 맞는 드럼 패턴을 MIDI 트랙에 기록 (쉬움 난이도: 가장 쉬운 패턴(1)만 프레이즈에 맞춰 배치)
