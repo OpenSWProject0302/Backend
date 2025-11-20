@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 import logging
 
-def convert_midi(midi_path, output_dir=None, audio_format="mp3"):
+def convert_midi(midi_path, output_dir=None, audio_format="wav"):
     musescore_path = os.getenv("MUSESCORE_PATH")
     midi_path = Path(midi_path)
 
