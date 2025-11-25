@@ -7,15 +7,20 @@ from pathlib import Path
 import boto3
 from celery import shared_task
 from django.conf import settings
+from botocore.config import Config
 
 from .models import DrumJob
 from drum.pipeline import run_drum_pipeline  # drum/pipeline.py
 
 logger = logging.getLogger(__name__)
 
-# S3 클라이언트 (EC2 IAM Role 또는 .env로 인증)
-s3 = boto3.client("s3")
+
+aws_region = getattr(settings, "AWS_S3_REGION_NAME", "ap-northeast-2")
+aws_config = Config(signature_version="s3v4")
+
+s3 = boto3.client("s3", region_name=aws_region, config=aws_config)
 BUCKET = settings.AWS_STORAGE_BUCKET_NAME
+
 
 
 @shared_task
