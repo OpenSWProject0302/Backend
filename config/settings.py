@@ -149,3 +149,7 @@ CORS_ALLOWED_ORIGINS = [
 CSRF_TRUSTED_ORIGINS = [
     "https://front-xi-blue.vercel.app",
 ]
+
+# Celery 설정 (Redis 브로커/백엔드 사용)
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/1"
