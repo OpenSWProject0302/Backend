@@ -8,19 +8,18 @@ from celery import shared_task
 from django.conf import settings
 
 from .models import DrumJob
-from drum.pipeline import run_drum_pipeline  # drum 앱 안의 pipeline.py 사용
+from drum.pipeline import run_drum_pipeline  # drum/pipeline.py 의 함수
 
 logger = logging.getLogger(__name__)
 
-# S3 클라이언트 준비
+# S3 클라이언트
 s3 = boto3.client("s3")
 BUCKET = getattr(settings, "AWS_STORAGE_BUCKET_NAME", None)
 
 
 def build_s3_url(key: str) -> str:
     """
-    S3 object key -> 브라우저에서 직접 접근 가능한 URL로 변환
-    (버킷/리전 설정이 없으면 그냥 key를 그대로 반환)
+    S3 object key -> 브라우저에서 접근 가능한 URL로 변환
     """
     bucket = getattr(settings, "AWS_STORAGE_BUCKET_NAME", None)
     region = getattr(settings, "AWS_S3_REGION_NAME", None)
@@ -35,11 +34,11 @@ def build_s3_url(key: str) -> str:
 @shared_task
 def run_drum_job(job_id: str):
     """
-    Celery가 실행하는 실제 비동기 작업.
+    Celery 비동기 Job
 
     1) S3에서 입력 wav 다운로드 (job.input_key)
-    2) drum.pipeline.run_drum_pipeline 실행 (MIDI/PDF/오디오 생성)
-    3) 결과 파일들을 S3에 업로드
+    2) run_drum_pipeline 실행 (PDF/오디오 생성)
+    3) 결과 파일들을 S3 results/ 경로에 업로드
     4) DrumJob.status / pdf_key / audio_key 업데이트
     """
     job = DrumJob.objects.get(pk=job_id)
@@ -48,7 +47,6 @@ def run_drum_job(job_id: str):
     job.save()
 
     if not BUCKET:
-        # 버킷 이름이 설정돼 있지 않으면 바로 에러 처리
         msg = "AWS_STORAGE_BUCKET_NAME is not set in settings."
         logger.error("[DrumJob] %s", msg)
         job.status = "ERROR"
@@ -64,7 +62,6 @@ def run_drum_job(job_id: str):
         logger.info("[DrumJob] tmp_dir=%s", tmp_dir)
 
         # 2) S3에서 입력 오디오 다운로드
-        #    파일명은 S3 key의 마지막 부분을 그대로 사용
         input_filename = Path(job.input_key).name or "input.wav"
         local_input_path = tmp_dir / input_filename
 
@@ -77,8 +74,6 @@ def run_drum_job(job_id: str):
         s3.download_file(BUCKET, job.input_key, str(local_input_path))
 
         # 3) 파이프라인 실행 (로컬에서 MIDI/PDF/오디오 생성)
-        #    pipeline.run_drum_pipeline 은 dict를 반환:
-        #    { "midi": path, "pdf": path, "drum_audio": path, "mix_audio": path }
         result_paths = run_drum_pipeline(
             audio_path=local_input_path,
             genre=job.genre or "Rock",
@@ -90,7 +85,6 @@ def run_drum_job(job_id: str):
         logger.info("[DrumJob] PIPELINE RESULT paths=%s", result_paths)
 
         pdf_path = Path(result_paths["pdf"])
-        # 오디오 쪽은 드럼만/믹스 중 하나 골라서 사용 – 여기서는 믹스 오디오 사용
         audio_path = Path(result_paths.get("mix_audio") or result_paths["drum_audio"])
 
         # 4) 결과물 S3 key 정의
@@ -114,7 +108,7 @@ def run_drum_job(job_id: str):
         )
         s3.upload_file(str(audio_path), BUCKET, audio_key)
 
-        # 6) DB에 URL 저장 (프론트에서 바로 href로 쓸 수 있도록)
+        # 6) DB에 URL 저장 (프론트가 그대로 href로 사용 가능하도록)
         job.pdf_key = build_s3_url(pdf_key)
         job.audio_key = build_s3_url(audio_key)
         job.status = "DONE"
