@@ -5,6 +5,9 @@ import json
 import uuid
 from pathlib import Path
 
+import logging
+from threading import Thread
+
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
@@ -14,6 +17,9 @@ from .utils_s3 import (
     upload_file_and_presign,
 )
 from drum.pipeline import run_drum_pipeline
+from jobs.models import DrumJob
+
+logger = logging.getLogger(__name__)
 
 
 @csrf_exempt  # 개발 단계용 (나중에 CSRF 헤더 붙이면 제거)
@@ -136,3 +142,45 @@ def process_drum(request):
         },
         status=200,
     )
+
+
+def _run_drum_job_in_background(job_id: str):
+    """
+    오래 걸리는 드럼 파이프라인을 백그라운드에서 실행하는 함수.
+    별도 Thread 에서 실행된다.
+    """
+    from django.db import connection  # 쓰고 끝에 close 해주기 위해
+
+    try:
+        job = DrumJob.objects.get(id=job_id)
+        job.status = "RUNNING"
+        job.save(update_fields=["status", "updated_at"])
+
+        # 🔥 실제 드럼 파이프라인 호출
+        # run_drum_pipeline 함수 시그니처에 맞게 인자를 넣어줘야 함!
+        # (여기서는 예시로 이런 형태라고 가정)
+        result = run_drum_pipeline(
+            input_key=job.input_key,
+            genre=job.genre,
+            tempo=job.tempo,
+            level=job.level,
+        )
+        # result 안에 pdf/audio S3 key 를 반환한다고 가정
+        job.pdf_key = result.get("pdf_key")
+        job.audio_key = result.get("audio_key")
+        job.status = "DONE"
+        job.error_message = ""
+        job.save(update_fields=["pdf_key", "audio_key", "status", "error_message", "updated_at"])
+
+    except Exception as e:
+        logger.exception("Drum job %s failed", job_id)
+        try:
+            job = DrumJob.objects.get(id=job_id)
+            job.status = "ERROR"
+            job.error_message = str(e)
+            job.save(update_fields=["status", "error_message", "updated_at"])
+        except Exception:
+            logger.exception("Failed to save error status for job %s", job_id)
+    finally:
+        # Thread 안에서 DB 커넥션 정리
+        connection.close()
