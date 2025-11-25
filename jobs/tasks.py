@@ -2,6 +2,7 @@
 import logging
 import tempfile
 from pathlib import Path
+import shutil   # ✅ 임시 폴더 삭제용
 
 import boto3
 from celery import shared_task
@@ -53,6 +54,8 @@ def run_drum_job(job_id: str):
         job.error_message = msg
         job.save()
         return
+
+    tmp_dir = None  # ✅ finally 에서 사용하기 위해 미리 선언
 
     try:
         logger.info("[DrumJob] START job_id=%s, input_key=%s", job_id, job.input_key)
@@ -125,4 +128,13 @@ def run_drum_job(job_id: str):
         job.status = "ERROR"
         job.error_message = str(e)
 
-    job.save()
+    finally:
+        # ✅ 여기서 항상 임시 폴더 정리 (성공/실패 상관없이)
+        if tmp_dir and tmp_dir.exists():
+            try:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+                logger.info("[DrumJob] tmp_dir removed: %s", tmp_dir)
+            except Exception as e:
+                logger.warning("[DrumJob] tmp_dir cleanup failed %s: %s", tmp_dir, e)
+
+        job.save()
