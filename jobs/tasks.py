@@ -1,46 +1,32 @@
 # jobs/tasks.py
 import logging
 import tempfile
+import shutil
 from pathlib import Path
-import shutil   # ✅ 임시 폴더 삭제용
 
 import boto3
 from celery import shared_task
 from django.conf import settings
 
 from .models import DrumJob
-from drum.pipeline import run_drum_pipeline  # drum/pipeline.py 의 함수
+from drum.pipeline import run_drum_pipeline  # drum/pipeline.py
 
 logger = logging.getLogger(__name__)
 
-# S3 클라이언트
+# S3 클라이언트 (EC2 IAM Role 또는 .env로 인증)
 s3 = boto3.client("s3")
-BUCKET = getattr(settings, "AWS_STORAGE_BUCKET_NAME", None)
-
-
-def build_s3_url(key: str) -> str:
-    """
-    S3 object key -> 브라우저에서 접근 가능한 URL로 변환
-    """
-    bucket = getattr(settings, "AWS_STORAGE_BUCKET_NAME", None)
-    region = getattr(settings, "AWS_S3_REGION_NAME", None)
-
-    if bucket and region:
-        return f"https://{bucket}.s3.{region}.amazonaws.com/{key}"
-    elif bucket:
-        return f"https://{bucket}.s3.amazonaws.com/{key}"
-    return key
+BUCKET = settings.AWS_STORAGE_BUCKET_NAME
 
 
 @shared_task
 def run_drum_job(job_id: str):
     """
-    Celery 비동기 Job
+    Celery 비동기 작업.
 
     1) S3에서 입력 wav 다운로드 (job.input_key)
-    2) run_drum_pipeline 실행 (PDF/오디오 생성)
-    3) 결과 파일들을 S3 results/ 경로에 업로드
-    4) DrumJob.status / pdf_key / audio_key 업데이트
+    2) run_drum_pipeline 실행 → midi / pdf / guide wav / mix wav 생성
+    3) 결과물 4개를 S3의 results/{job_id}/ 아래에 업로드
+    4) DrumJob에는 "S3 key" 만 저장 (URL X), status="DONE"
     """
     job = DrumJob.objects.get(pk=job_id)
 
@@ -55,7 +41,7 @@ def run_drum_job(job_id: str):
         job.save()
         return
 
-    tmp_dir = None  # ✅ finally 에서 사용하기 위해 미리 선언
+    tmp_dir: Path | None = None
 
     try:
         logger.info("[DrumJob] START job_id=%s, input_key=%s", job_id, job.input_key)
@@ -76,7 +62,7 @@ def run_drum_job(job_id: str):
         )
         s3.download_file(BUCKET, job.input_key, str(local_input_path))
 
-        # 3) 파이프라인 실행 (로컬에서 MIDI/PDF/오디오 생성)
+        # 3) 파이프라인 실행 (로컬에서 MIDI/PDF/오디오 2개 생성)
         result_paths = run_drum_pipeline(
             audio_path=local_input_path,
             genre=job.genre or "Rock",
@@ -87,37 +73,56 @@ def run_drum_job(job_id: str):
 
         logger.info("[DrumJob] PIPELINE RESULT paths=%s", result_paths)
 
+        midi_path = Path(result_paths["midi"])
         pdf_path = Path(result_paths["pdf"])
-        audio_path = Path(result_paths.get("mix_audio") or result_paths["drum_audio"])
+        guide_audio_path = Path(result_paths["drum_audio"])  # 가이드 드럼만
+        mix_audio_path = Path(result_paths["mix_audio"])     # 원곡+드럼 믹스
 
-        # 4) 결과물 S3 key 정의
-        pdf_key = f"results/{job.id}/output.pdf"
-        audio_key = f"results/{job.id}/output.wav"
+        # 4) S3 key 정의 (총 4개)
+        base_prefix = f"results/{job.id}"
+        midi_key = f"{base_prefix}/drums.mid"
+        pdf_key = f"{base_prefix}/output.pdf"
+        guide_audio_key = f"{base_prefix}/guide.wav"
+        mix_audio_key = f"{base_prefix}/mix.wav"
 
-        # 5) 결과물 S3 업로드
-        logger.info(
-            "[DrumJob] Uploading PDF to S3 bucket=%s key=%s from %s",
+        # 5) 결과물 4개 모두 업로드
+        logger.info("[DrumJob] Uploading MIDI to S3 key=%s", midi_key)
+        s3.upload_file(str(midi_path), BUCKET, midi_key)
+
+        logger.info("[DrumJob] Uploading PDF to S3 key=%s", pdf_key)
+        s3.upload_file(
+            str(pdf_path),
             BUCKET,
             pdf_key,
-            pdf_path,
+            ExtraArgs={"ContentType": "application/pdf"},
         )
-        s3.upload_file(str(pdf_path), BUCKET, pdf_key)
 
-        logger.info(
-            "[DrumJob] Uploading audio to S3 bucket=%s key=%s from %s",
+        logger.info("[DrumJob] Uploading GUIDE audio to S3 key=%s", guide_audio_key)
+        s3.upload_file(
+            str(guide_audio_path),
             BUCKET,
-            audio_key,
-            audio_path,
+            guide_audio_key,
+            ExtraArgs={"ContentType": "audio/wav"},
         )
-        s3.upload_file(str(audio_path), BUCKET, audio_key)
 
-        # 6) DB에 URL 저장 (프론트가 그대로 href로 사용 가능하도록)
-        job.pdf_key = build_s3_url(pdf_key)
-        job.audio_key = build_s3_url(audio_key)
+        logger.info("[DrumJob] Uploading MIX audio to S3 key=%s", mix_audio_key)
+        s3.upload_file(
+            str(mix_audio_path),
+            BUCKET,
+            mix_audio_key,
+            ExtraArgs={"ContentType": "audio/wav"},
+        )
+
+        # 6) DB에는 "S3 key" 만 저장 (URL X)
+        #    프론트에서 실제 다운로드 URL은 presigned URL 로 따로 발급
+        job.pdf_key = pdf_key          # output.pdf
+        job.audio_key = mix_audio_key  # mix.wav (사용자한테 내려줄 오디오)
+
         job.status = "DONE"
+        job.error_message = ""
 
         logger.info(
-            "[DrumJob] DONE job_id=%s pdf_url=%s audio_url=%s",
+            "[DrumJob] DONE job_id=%s pdf_key=%s audio_key=%s",
             job_id,
             job.pdf_key,
             job.audio_key,
@@ -129,7 +134,7 @@ def run_drum_job(job_id: str):
         job.error_message = str(e)
 
     finally:
-        # ✅ 여기서 항상 임시 폴더 정리 (성공/실패 상관없이)
+        # ✅ 임시 폴더 정리 (성공/실패 상관없이)
         if tmp_dir and tmp_dir.exists():
             try:
                 shutil.rmtree(tmp_dir, ignore_errors=True)
