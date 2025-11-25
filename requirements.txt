@@ -90,3 +90,4 @@ typing_extensions==4.15.0
 wcwidth==0.2.14
 prompt_toolkit==3.0.52
 six==1.17.0
+gunicorn

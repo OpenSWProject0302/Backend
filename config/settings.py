@@ -22,9 +22,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+    '.compute.amazonaws.com',  # AWS 기본 도메인
+    '15.164.214.82',           # 본인의 EC2 퍼블릭 IP (여기에 실제 IP 입력 필수!)
+    'front-xi-blue.vercel.app' # 프론트 도메인도 넣어두면 좋음
+]
 
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
@@ -123,6 +129,7 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -135,4 +142,9 @@ CORS_ALLOW_CREDENTIALS = True  # fetch에서 credentials: 'include' 쓰니까 �
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://front-xi-blue.vercel.app",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://front-xi-blue.vercel.app",
 ]
