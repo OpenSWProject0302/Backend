@@ -1,6 +1,8 @@
 # jobs/views.py
 import boto3
 from django.conf import settings
+from botocore.config import Config
+
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -9,9 +11,13 @@ from rest_framework import status
 from .models import DrumJob
 from .tasks import run_drum_job
 
-# S3 클라이언트
-s3 = boto3.client("s3")
+
+aws_region = getattr(settings, "AWS_S3_REGION_NAME", "ap-northeast-2")
+aws_config = Config(signature_version="s3v4")
+
+s3 = boto3.client("s3", region_name=aws_region, config=aws_config)
 BUCKET = settings.AWS_STORAGE_BUCKET_NAME
+
 
 
 @api_view(["POST"])
