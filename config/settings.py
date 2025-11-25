@@ -28,7 +28,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
     '.compute.amazonaws.com',  # AWS 기본 도메인
-    '15.164.214.82',           # 본인의 EC2 퍼블릭 IP (여기에 실제 IP 입력 필수!)
+    '13.209.190.243',           # 본인의 EC2 퍼블릭 IP (여기에 실제 IP 입력 필수!)
     'front-xi-blue.vercel.app' # 프론트 도메인도 넣어두면 좋음
 ]
 
