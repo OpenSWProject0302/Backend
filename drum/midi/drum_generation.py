@@ -1,5 +1,4 @@
 from pathlib import Path
-# [수정 1] Message 클래스 추가 임포트
 from mido import MidiTrack, MetaMessage, bpm2tempo, Message
 from drum.audio.analysis import detect_phrase_transitions
 from drum.midi.drum_writer import write_drum_patterns_normal, write_drum_patterns_easy
@@ -18,11 +17,11 @@ def generate_drum_midi_from_audio(audio_path: Path, genre: str, tempo: int, leve
     phrase_strengths = result["phrase_strengths"]
 
     track = MidiTrack()
+    track.append(MetaMessage('track_name', name='Drums'))
+
     track.append(MetaMessage('time_signature', numerator=4, denominator=4))
     track.append(MetaMessage('set_tempo', tempo=bpm2tempo(tempo)))
 
-    # [수정 2] MetaMessage -> Message 로 변경
-    # program_change는 메타 데이터가 아닌 채널 메시지입니다.
     track.append(Message('program_change', program=0, channel=DRUM_CHANNEL, time=0))
 
     # 2. 프레이즈 구간 생성
