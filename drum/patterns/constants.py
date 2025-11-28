@@ -1,5 +1,5 @@
 # 악기 채널, velocity
-DRUM_CHANNEL = 8  # 드럼 채널
+DRUM_CHANNEL = 9  # 드럼 채널
 VELOCITY = 100
 
 # 각 드럼 음
