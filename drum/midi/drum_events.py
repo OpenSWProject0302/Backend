@@ -24,4 +24,4 @@ def play_drum(track: MidiTrack, pattern: dict):
                 playOff(track, note, time=NOTE_LENGTH["SIXTEENTH"] if i == 0 else 0, channel=DRUM_CHANNEL)
         else:
             # 쉼표 구간이면 시간만 흐르게 함
-            track.append(Message('note_off', note=0, velocity=0, time=NOTE_LENGTH["SIXTEENTH"], channel=DRUM_CHANNEL))
+            track.append(Message('note_off', note=35, velocity=0, time=NOTE_LENGTH["SIXTEENTH"], channel=DRUM_CHANNEL))
