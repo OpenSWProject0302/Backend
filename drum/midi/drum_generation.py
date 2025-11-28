@@ -17,7 +17,9 @@ def generate_drum_midi_from_audio(audio_path: Path, genre: str, tempo: int, leve
     phrase_strengths = result["phrase_strengths"]
 
     track = MidiTrack()
+    track.append(Message('sysex', data=(0x7E, 0x7F, 0x09, 0x01)))
     track.append(MetaMessage('track_name', name='Drums'))
+    track.append(MetaMessage('instrument_name', name='Drums'))
 
     track.append(MetaMessage('time_signature', numerator=4, denominator=4))
     track.append(MetaMessage('set_tempo', tempo=bpm2tempo(tempo)))
