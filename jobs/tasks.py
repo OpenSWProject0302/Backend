@@ -1,4 +1,3 @@
-# jobs/tasks.py
 import logging
 import tempfile
 import shutil
@@ -10,7 +9,7 @@ from django.conf import settings
 from botocore.config import Config
 
 from .models import DrumJob
-from drum.pipeline import run_drum_pipeline  # drum/pipeline.py
+from drum.pipeline import run_drum_pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +30,9 @@ def run_drum_job(job_id: str):
     1) S3에서 입력 wav 다운로드 (job.input_key)
     2) run_drum_pipeline 실행 → midi / pdf / guide wav / mix wav 생성
     3) 결과물 4개를 S3의 results/{job_id}/ 아래에 업로드
-    4) DrumJob에는 "S3 key" 만 저장 (URL X), status="DONE"
+    4) DrumJob에는 "S3 key" 만 저장, status="DONE"
     """
+
     job = DrumJob.objects.get(pk=job_id)
 
     job.status = "RUNNING"
@@ -121,7 +121,7 @@ def run_drum_job(job_id: str):
         # 6) DB에는 "S3 key" 만 저장 (URL X)
         #    프론트에서 실제 다운로드 URL은 presigned URL 로 따로 발급
         job.pdf_key = pdf_key          # output.pdf
-        job.audio_key = mix_audio_key  # mix.wav (사용자한테 내려줄 오디오)
+        job.audio_key = mix_audio_key  # mix.wav
 
         job.status = "DONE"
         job.error_message = ""
