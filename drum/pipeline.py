@@ -23,13 +23,14 @@ def run_drum_pipeline(
 
     반환값: dict 형태로 결과 파일들의 로컬 경로를 제공.
     """
+
     audio_path = Path(audio_path)
 
     if output_dir:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
     else:
-        output_dir = audio_path.parent  # 기본은 같은 폴더
+        output_dir = audio_path.parent
 
     # 1. MIDI 파일 경로 생성
     midi_path = create_midi_path(audio_path, output_dir)
@@ -50,7 +51,7 @@ def run_drum_pipeline(
     mix_audio_path = separate_merge_drum(audio_path, drum_audio_path)
     logger.info(f"[DRUM PIPELINE] 믹스 오디오 생성: {mix_audio_path}")
 
-    # Django 서버에서는 dict로 반환하는 게 가장 편함
+
     return {
         "midi": str(midi_path),
         "pdf": str(pdf_path),

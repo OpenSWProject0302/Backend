@@ -1,4 +1,3 @@
-# jobs/views.py
 import boto3
 from botocore.config import Config
 from django.conf import settings
@@ -10,7 +9,7 @@ from rest_framework import status
 from .models import DrumJob
 from .tasks import run_drum_job
 
-# ── S3 클라이언트 (SigV4 강제) ─────────────────────────────────────
+
 aws_region = getattr(settings, "AWS_S3_REGION_NAME", "ap-northeast-2")
 aws_config = Config(signature_version="s3v4")
 
@@ -25,6 +24,7 @@ def start_drum_job(request):
     - 프론트에서 S3 업로드를 끝낸 뒤 호출
     - inputKey (필수), genre/tempo/level 등 옵션 전달
     """
+
     data = request.data
 
     input_key = data.get("inputKey")
@@ -122,7 +122,6 @@ def get_drum_job(request, job_id):
             "ok": True,
             "jobId": str(job.id),
             "status": job.status,
-            # 🔹 프론트에서 사용할 4가지 URL
             "pdfKey": pdf_url,
             "audioKey": audio_url,   # mix.wav
             "midiKey": midi_url,

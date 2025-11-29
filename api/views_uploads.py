@@ -18,7 +18,6 @@ def get_s3_client():
     )
 
 
-# 브라우저마다 wav MIME 타입이 조금씩 다를 수 있어서 넉넉하게 허용
 ALLOWED_CONTENT_TYPES = {
     "audio/mpeg",     # 일반 mp3
     "audio/mp3",

@@ -1,4 +1,3 @@
-# api/views_drums.py
 from __future__ import annotations
 
 import json
@@ -22,7 +21,7 @@ from jobs.models import DrumJob
 logger = logging.getLogger(__name__)
 
 
-@csrf_exempt  # 개발 단계용 (나중에 CSRF 헤더 붙이면 제거)
+@csrf_exempt  # 개발 단계용
 @require_POST
 def process_drum(request):
     # 1. guest_id 쿠키 확인
@@ -145,10 +144,9 @@ def process_drum(request):
 
 
 def _run_drum_job_in_background(job_id: str):
-    """
-    오래 걸리는 드럼 파이프라인을 백그라운드에서 실행하는 함수.
-    별도 Thread 에서 실행된다.
-    """
+
+    # 오래 걸리는 드럼 파이프라인을 백그라운드에서 실행하는 함수. (별도 Thread 에서 실행)
+
     from django.db import connection  # 쓰고 끝에 close 해주기 위해
 
     try:
@@ -156,16 +154,14 @@ def _run_drum_job_in_background(job_id: str):
         job.status = "RUNNING"
         job.save(update_fields=["status", "updated_at"])
 
-        # 🔥 실제 드럼 파이프라인 호출
-        # run_drum_pipeline 함수 시그니처에 맞게 인자를 넣어줘야 함!
-        # (여기서는 예시로 이런 형태라고 가정)
+        # 실제 드럼 파이프라인 호출
         result = run_drum_pipeline(
             input_key=job.input_key,
             genre=job.genre,
             tempo=job.tempo,
             level=job.level,
         )
-        # result 안에 pdf/audio S3 key 를 반환한다고 가정
+        # result 안에 pdf/audio S3 key 를 반환
         job.pdf_key = result.get("pdf_key")
         job.audio_key = result.get("audio_key")
         job.status = "DONE"

@@ -21,15 +21,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
-    '.compute.amazonaws.com',  # AWS 기본 도메인
-    '13.209.190.243',           # 본인의 EC2 퍼블릭 IP (여기에 실제 IP 입력 필수!)
-    'front-xi-blue.vercel.app' # 프론트 도메인도 넣어두면 좋음
+    '.compute.amazonaws.com',
+    '13.209.190.243',
+    'front-xi-blue.vercel.app'
 ]
 
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
@@ -41,7 +40,6 @@ AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_S3_BUCKET_NAME")
 MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE", 100 * 1024 * 1024))   # 20MB
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -140,7 +138,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS_ALLOW_ALL_ORIGINS = True
 
-CORS_ALLOW_CREDENTIALS = True  # fetch에서 credentials: 'include' 쓰니까 필수
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
